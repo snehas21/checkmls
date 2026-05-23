@@ -15,8 +15,11 @@
       --muted:    #94a3b8;
       --accent:   #ef4444;
       --green:    #22c55e;
+      --amber:    #f59e0b;
+      --blue:     #60a5fa;
       --green-bg: rgba(34,197,94,.1);
       --red-bg:   rgba(239,68,68,.12);
+      --amber-bg: rgba(245,158,11,.12);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,7 +44,6 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      backdrop-filter: blur(10px);
     }
 
     .header-left h1 {
@@ -96,7 +98,7 @@
       white-space: nowrap;
     }
 
-    .btn-refresh:hover  { opacity: .85; }
+    .btn-refresh:hover   { opacity: .85; }
     .btn-refresh:disabled { opacity: .45; cursor: not-allowed; }
 
     /* ── MAIN ── */
@@ -113,6 +115,8 @@
       justify-content: space-between;
       margin-bottom: 20px;
       min-height: 36px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .count-badge {
@@ -125,7 +129,13 @@
       display: none;
     }
 
-    .count-badge strong { color: var(--green); font-size: 1em; }
+    .count-badge strong { color: var(--green); }
+
+    .center-note {
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: none;
+    }
 
     /* Loading */
     #loading {
@@ -146,6 +156,8 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    #loading-msg { font-size: 0.875rem; }
+
     /* Error */
     .error-box {
       background: var(--red-bg);
@@ -157,6 +169,17 @@
 
     .error-box h3 { color: #fca5a5; margin-bottom: 6px; font-size: 0.95rem; }
     .error-box p  { color: var(--muted); font-size: 0.82rem; margin-top: 4px; }
+
+    /* Notice (non-fatal warning) */
+    .notice-box {
+      background: var(--amber-bg);
+      border: 1px solid rgba(245,158,11,.3);
+      border-radius: 10px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      font-size: 0.78rem;
+      color: #fcd34d;
+    }
 
     /* No results */
     #no-results {
@@ -189,12 +212,38 @@
       color: inherit;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     .listing-card:hover {
       transform: translateY(-3px);
       box-shadow: 0 12px 32px rgba(0,0,0,.45);
       border-color: rgba(239,68,68,.4);
+    }
+
+    /* Singer Crt highlight */
+    .listing-card.on-singer-crt {
+      border-color: rgba(245,158,11,.5);
+    }
+
+    .listing-card.on-singer-crt:hover {
+      border-color: var(--amber);
+    }
+
+    /* Badge pinned to top-right of photo */
+    .singer-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: var(--amber);
+      color: #000;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      z-index: 2;
+      letter-spacing: .02em;
+      text-transform: uppercase;
     }
 
     .card-photo-wrap {
@@ -210,7 +259,6 @@
       height: 100%;
       object-fit: cover;
       display: block;
-      transition: opacity .2s;
     }
 
     .card-photo-placeholder {
@@ -259,6 +307,20 @@
       color: var(--muted);
     }
 
+    /* Distance chip gets a blue tint */
+    .chip.dist {
+      color: var(--blue);
+      border-color: rgba(96,165,250,.3);
+      background: rgba(96,165,250,.08);
+    }
+
+    /* Singer Crt chip amber */
+    .chip.singer {
+      color: var(--amber);
+      border-color: rgba(245,158,11,.3);
+      background: rgba(245,158,11,.08);
+    }
+
     .card-footer {
       padding: 10px 16px;
       border-top: 1px solid var(--border);
@@ -267,13 +329,8 @@
       align-items: center;
     }
 
-    .mls-num { font-size: 0.68rem; color: var(--muted); }
-
-    .view-link {
-      font-size: 0.75rem;
-      color: var(--accent);
-      font-weight: 600;
-    }
+    .mls-num   { font-size: 0.68rem; color: var(--muted); }
+    .view-link { font-size: 0.75rem; color: var(--accent); font-weight: 600; }
 
     /* Fallback */
     .fallback-section {
@@ -285,10 +342,7 @@
       text-align: center;
     }
 
-    .fallback-section h3 {
-      font-size: 0.95rem;
-      margin-bottom: 6px;
-    }
+    .fallback-section h3 { font-size: 0.95rem; margin-bottom: 6px; }
 
     .fallback-section p {
       color: var(--muted);
@@ -312,7 +366,6 @@
 
     .btn-realtor:hover { opacity: .85; }
 
-    /* Divider note */
     .note {
       text-align: center;
       font-size: 0.72rem;
@@ -333,7 +386,7 @@
   <div class="header-left">
     <h1>Singer Crt <span>Condo Finder</span></h1>
     <div class="criteria-tags">
-      <span class="tag">📍 Singer Crt, North York, ON</span>
+      <span class="tag">📍 Within 5 km of Singer Crt, North York</span>
       <span class="tag">🛏 1 Bedroom</span>
       <span class="tag">🏢 Condo / Strata</span>
       <span class="tag">💰 Under $400,000</span>
@@ -349,29 +402,31 @@
 
   <div class="status-bar">
     <div class="count-badge" id="count-badge">
-      Found <strong id="count-num">0</strong> listing(s) on Singer Crt
+      <strong id="count-num">0</strong> listing(s) within 5 km of Singer Crt
     </div>
+    <span class="center-note" id="center-note"></span>
   </div>
 
   <div id="loading">
     <div class="spinner"></div>
-    <p>Searching MLS listings…</p>
+    <p id="loading-msg">Locating Singer Crt…</p>
   </div>
 
   <div id="error-container"></div>
+  <div id="notice-container"></div>
 
   <div class="listings-grid" id="listings-grid"></div>
 
   <div id="no-results">
     <div class="nr-icon">🏠</div>
-    <h3>No active listings found on Singer Crt</h3>
-    <p>There are currently no 1-bedroom condos under $400K listed on Singer Crt.</p>
-    <p style="margin-top:6px">Check back later — this page auto-fetches from MLS on every visit.</p>
+    <h3>No active listings found nearby</h3>
+    <p>There are currently no 1-bedroom condos under $400K within 5 km of Singer Crt.</p>
+    <p style="margin-top:6px">Check back later — this page fetches live from MLS on every visit.</p>
   </div>
 
   <div class="fallback-section">
     <h3>Search Directly on Realtor.ca</h3>
-    <p>Open Realtor.ca with the same search criteria pre-applied (1 bed · condo · under $400K · North York), then search for "Singer Crt".</p>
+    <p>Open Realtor.ca with the same search criteria pre-applied (1 bed · condo · under $400K · North York), then refine to your desired radius.</p>
     <a class="btn-realtor"
        href="https://www.realtor.ca/map#view=list&Sort=6-D&GeoIds=g30_c2l2rpbc0&GeoTypeId=4&LocationName=North%20York%2C%20ON&PropertyTypeGroupID=1&OwnershipTypeGroupId=2&TransactionTypeId=2&PriceMax=400000&BedRange=1-1"
        target="_blank" rel="noopener noreferrer">
@@ -381,48 +436,62 @@
   </div>
 
   <p class="note" style="margin-top:20px">
-    Data sourced from Realtor.ca (CREA MLS® System). Prices and availability subject to change.
+    Data sourced from Realtor.ca (CREA MLS® System). Prices and availability subject to change.<br>
+    ⭐ Gold border = listing is on Singer Crt itself.
   </p>
 
 </div>
 
 <script>
   /* ────────────────────────────────────────────────────
-     Configuration
+     Constants
   ──────────────────────────────────────────────────── */
-  const API_URL    = 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post';
-  const CORS_PROXY = 'https://corsproxy.io/?url=';
+  const SEARCH_URL    = 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post';
+  const GEOCODE_URL   = 'https://api2.realtor.ca/Listing.svc/LocationSearch';
+  const CORS_PROXY    = 'https://corsproxy.io/?url=';
+  const RADIUS_KM     = 5;
 
-  // Bounding box covering North York / Toronto area
-  const SEARCH_PARAMS = new URLSearchParams({
-    CultureId:              '1',
-    ApplicationId:          '1',
-    RecordsPerPage:         '200',
-    MaxRecords:             '500',
-    PropertySearchTypeId:   '1',   // Residential
-    TransactionTypeId:      '2',   // For Sale
-    PriceMax:               '399999',
-    BedRange:               '1-1', // exactly 1 bedroom
-    OwnershipTypeGroupId:   '2',   // Condo / Strata
-    LongitudeMin:           '-79.58',
-    LongitudeMax:           '-79.30',
-    LatitudeMin:            '43.67',
-    LatitudeMax:            '43.83',
-    SortBy:                 '6',   // Price
-    SortOrder:              'A',   // Low → High
-  });
+  // Fallback coords if geocoding fails (approximate — Yonge/Sheppard area, North York)
+  const SINGER_FALLBACK = { lat: 43.7667, lon: -79.4132 };
+
+  /* ────────────────────────────────────────────────────
+     Geometry helpers
+  ──────────────────────────────────────────────────── */
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2
+            + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+            * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.asin(Math.sqrt(a));
+  }
+
+  function boundingBox(lat, lon, km) {
+    const dLat = km / 111;
+    const dLon = km / (111 * Math.cos(lat * Math.PI / 180));
+    return {
+      latMin: (lat - dLat).toFixed(6),
+      latMax: (lat + dLat).toFixed(6),
+      lonMin: (lon - dLon).toFixed(6),
+      lonMax: (lon + dLon).toFixed(6),
+    };
+  }
 
   /* ────────────────────────────────────────────────────
      UI helpers
   ──────────────────────────────────────────────────── */
-  function setLoading(on) {
-    document.getElementById('loading').style.display     = on ? 'block' : 'none';
-    document.getElementById('refresh-btn').disabled      = on;
+  function setLoading(on, msg) {
+    document.getElementById('loading').style.display = on ? 'block' : 'none';
+    if (msg) document.getElementById('loading-msg').textContent = msg;
+    document.getElementById('refresh-btn').disabled = on;
     if (on) {
-      document.getElementById('listings-grid').innerHTML = '';
+      document.getElementById('listings-grid').innerHTML  = '';
       document.getElementById('no-results').style.display = 'none';
       document.getElementById('count-badge').style.display = 'none';
-      document.getElementById('error-container').innerHTML = '';
+      document.getElementById('center-note').style.display = 'none';
+      document.getElementById('error-container').innerHTML  = '';
+      document.getElementById('notice-container').innerHTML = '';
     }
   }
 
@@ -435,102 +504,192 @@
       </div>`;
   }
 
+  function showNotice(msg) {
+    document.getElementById('notice-container').innerHTML =
+      `<div class="notice-box">⚠ ${msg}</div>`;
+  }
+
   function stampTime() {
-    const t = new Date().toLocaleTimeString('en-CA', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-    document.getElementById('last-updated').textContent = 'Updated ' + t;
+    document.getElementById('last-updated').textContent =
+      'Updated ' + new Date().toLocaleTimeString('en-CA', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      });
   }
 
   /* ────────────────────────────────────────────────────
-     API fetch — tries direct first, then CORS proxy
+     Network helpers — direct then CORS proxy
   ──────────────────────────────────────────────────── */
-  async function postSearch(url) {
-    const res = await fetch(url, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    SEARCH_PARAMS.toString(),
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
+  async function getJson(url) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return r.json();
+    } catch {}
+    const r = await fetch(CORS_PROXY + encodeURIComponent(url));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
   }
 
-  async function fetchListings() {
-    setLoading(true);
+  async function postJson(url, body) {
+    const opts = {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    };
+    try {
+      const r = await fetch(url, opts);
+      if (r.ok) return r.json();
+    } catch {}
+    const r = await fetch(CORS_PROXY + encodeURIComponent(url), opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
 
-    let data = null;
-    let lastErr = '';
+  /* ────────────────────────────────────────────────────
+     Geocode Singer Crt via Realtor.ca LocationSearch
+  ──────────────────────────────────────────────────── */
+  async function geocodeSingerCrt() {
+    const qs = new URLSearchParams({
+      SearchText:    'Singer Crt North York ON',
+      Language:      'English',
+      ApplicationId: '1',
+      CultureId:     '1',
+    });
+    try {
+      const data = await getJson(`${GEOCODE_URL}?${qs}`);
+      const r = data?.Results?.[0];
+      if (r) {
+        const lat = parseFloat(r.Latitude  ?? r.latitude);
+        const lon = parseFloat(r.Longitude ?? r.longitude);
+        if (!isNaN(lat) && !isNaN(lon)) return { lat, lon, geocoded: true };
+      }
+    } catch {}
+    return { ...SINGER_FALLBACK, geocoded: false };
+  }
+
+  /* ────────────────────────────────────────────────────
+     Main fetch
+  ──────────────────────────────────────────────────── */
+  async function fetchListings() {
+    setLoading(true, 'Locating Singer Crt…');
+
+    // Step 1 — geocode
+    const center = await geocodeSingerCrt();
+
+    if (!center.geocoded) {
+      showNotice('Could not geocode Singer Crt precisely — using approximate coordinates near Yonge &amp; Sheppard.');
+    }
+
+    // Step 2 — build bounding box
+    const box = boundingBox(center.lat, center.lon, RADIUS_KM);
+
+    setLoading(true, 'Searching MLS listings within 5 km…');
+
+    // Step 3 — query MLS
+    const params = new URLSearchParams({
+      CultureId:            '1',
+      ApplicationId:        '1',
+      RecordsPerPage:       '200',
+      MaxRecords:           '500',
+      PropertySearchTypeId: '1',   // Residential
+      TransactionTypeId:    '2',   // For Sale
+      PriceMax:             '399999',
+      BedRange:             '1-1',
+      OwnershipTypeGroupId: '2',   // Condo / Strata
+      LongitudeMin:         box.lonMin,
+      LongitudeMax:         box.lonMax,
+      LatitudeMin:          box.latMin,
+      LatitudeMax:          box.latMax,
+      SortBy:               '6',
+      SortOrder:            'A',
+    });
+
+    let allResults = null;
+    let fetchErr   = '';
 
     try {
-      data = await postSearch(API_URL);
-    } catch (e1) {
-      lastErr = e1.message;
-      try {
-        data = await postSearch(CORS_PROXY + encodeURIComponent(API_URL));
-      } catch (e2) {
-        lastErr = e2.message;
-      }
+      const data = await postJson(SEARCH_URL, params.toString());
+      allResults = data?.Results ?? [];
+    } catch (e) {
+      fetchErr = e.message;
     }
 
     setLoading(false);
     stampTime();
 
-    if (!data) {
-      showError('Connection failed (' + lastErr + '). The Realtor.ca API may be temporarily unavailable or blocked by your browser.');
+    if (allResults === null) {
+      showError('Connection failed (' + fetchErr + '). The Realtor.ca API may be temporarily unavailable.');
       return;
     }
 
-    const allResults = data.Results || [];
+    // Step 4 — annotate with distance, filter to radius, sort
+    const annotated = allResults
+      .map(l => {
+        const lat = parseFloat(l.Property?.Address?.Latitude  || '0');
+        const lon = parseFloat(l.Property?.Address?.Longitude || '0');
+        const dist = (lat && lon)
+          ? haversineKm(center.lat, center.lon, lat, lon)
+          : RADIUS_KM; // if coords missing, treat as edge
+        return { ...l, _dist: dist };
+      })
+      .filter(l => l._dist <= RADIUS_KM)
+      .sort((a, b) => a._dist - b._dist);
 
-    // Filter client-side: address must contain "singer"
-    const singerListings = allResults.filter(l => {
-      const addr = (l.Property?.Address?.AddressText || '').toLowerCase();
-      return addr.includes('singer');
-    });
-
-    // Show count badge
+    // Show status
     const badge = document.getElementById('count-badge');
     badge.style.display = 'block';
-    document.getElementById('count-num').textContent = singerListings.length;
+    document.getElementById('count-num').textContent = annotated.length;
 
-    if (singerListings.length === 0) {
+    const centerNote = document.getElementById('center-note');
+    centerNote.style.display = 'inline';
+    centerNote.textContent =
+      `Center: ${center.lat.toFixed(4)}, ${center.lon.toFixed(4)}` +
+      (center.geocoded ? '' : ' (approx)');
+
+    if (annotated.length === 0) {
       document.getElementById('no-results').style.display = 'block';
     } else {
       document.getElementById('listings-grid').innerHTML =
-        singerListings.map(buildCard).join('');
+        annotated.map(buildCard).join('');
     }
   }
 
   /* ────────────────────────────────────────────────────
      Card renderer
   ──────────────────────────────────────────────────── */
-  function toTitleCase(str) {
-    return str.replace(/\w\S*/g, w =>
+  function toTitleCase(s) {
+    return s.replace(/\w\S*/g, w =>
       w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
     );
   }
 
   function formatAddress(raw) {
-    // "123 SINGER CRT|North York|Ontario|M2N 6H1"
-    const parts = raw.split('|');
-    return parts
+    return raw.split('|')
       .map((p, i) => i === 0 ? toTitleCase(p.trim()) : p.trim())
       .join(', ');
   }
 
   function buildCard(l) {
-    const price   = l.Property?.Price || 'Price N/A';
-    const rawAddr = l.Property?.Address?.AddressText || '';
-    const addr    = formatAddress(rawAddr);
-    const beds    = l.Building?.BedRange  || '1';
-    const baths   = l.Building?.BathroomTotal || '—';
-    const btype   = l.Building?.Type || 'Condo';
-    const own     = l.Property?.OwnershipType || 'Condominium';
-    const photo   = l.Property?.Photo?.[0]?.HighResPath || '';
-    const mls     = l.MlsNumber || '';
-    const href    = l.RelativeDetailsURL
+    const price    = l.Property?.Price || 'Price N/A';
+    const rawAddr  = l.Property?.Address?.AddressText || '';
+    const addr     = formatAddress(rawAddr);
+    const beds     = l.Building?.BedRange      || '1';
+    const baths    = l.Building?.BathroomTotal || '—';
+    const btype    = l.Building?.Type          || 'Condo';
+    const own      = l.Property?.OwnershipType || 'Condominium';
+    const photo    = l.Property?.Photo?.[0]?.HighResPath || '';
+    const mls      = l.MlsNumber || '';
+    const href     = l.RelativeDetailsURL
       ? 'https://www.realtor.ca' + l.RelativeDetailsURL
       : 'https://www.realtor.ca';
+
+    const distKm   = l._dist;
+    const distText = distKm < 0.1
+      ? '< 100 m'
+      : distKm < 1
+        ? Math.round(distKm * 1000) + ' m'
+        : distKm.toFixed(2) + ' km';
+
+    const onSingerCrt = rawAddr.toLowerCase().includes('singer');
 
     const imgTag = photo
       ? `<img class="card-photo" src="${escHtml(photo)}" alt="${escHtml(addr)}" loading="lazy"
@@ -540,15 +699,18 @@
     const phStyle = photo ? 'style="display:none"' : '';
 
     return `
-      <a class="listing-card" href="${escHtml(href)}" target="_blank" rel="noopener noreferrer">
+      <a class="listing-card${onSingerCrt ? ' on-singer-crt' : ''}"
+         href="${escHtml(href)}" target="_blank" rel="noopener noreferrer">
         <div class="card-photo-wrap">
           ${imgTag}
           <div class="card-photo-placeholder" ${phStyle}>🏢</div>
+          ${onSingerCrt ? '<span class="singer-badge">⭐ Singer Crt</span>' : ''}
         </div>
         <div class="card-body">
           <div class="card-price">${escHtml(price)}</div>
           <div class="card-address">${escHtml(addr)}</div>
           <div class="card-chips">
+            <span class="chip dist">📍 ${escHtml(distText)} away</span>
             <span class="chip">🛏 ${escHtml(beds)} bed</span>
             <span class="chip">🚿 ${escHtml(String(baths))} bath</span>
             <span class="chip">🏢 ${escHtml(btype)}</span>
@@ -564,13 +726,13 @@
 
   function escHtml(s) {
     return String(s)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
-  /* Auto-run on page load */
+  /* Auto-run */
   fetchListings();
 </script>
 
