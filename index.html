@@ -446,13 +446,20 @@
   /* ────────────────────────────────────────────────────
      Constants
   ──────────────────────────────────────────────────── */
-  const SEARCH_URL    = 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post';
-  const GEOCODE_URL   = 'https://api2.realtor.ca/Listing.svc/LocationSearch';
-  const CORS_PROXY    = 'https://corsproxy.io/?url=';
-  const RADIUS_KM     = 5;
+  const SEARCH_POST_URL = 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post';
+  const SEARCH_GET_URL  = 'https://api2.realtor.ca/Listing.svc/PropertySearch_Post'; // same endpoint accepts GET too
+  const GEOCODE_URL     = 'https://api2.realtor.ca/Listing.svc/LocationSearch';
+  const RADIUS_KM       = 5;
 
-  // Fallback coords if geocoding fails (approximate — Yonge/Sheppard area, North York)
+  // Fallback coords if geocoding fails (Singer Crt, North York — near Yonge/Sheppard)
   const SINGER_FALLBACK = { lat: 43.7667, lon: -79.4132 };
+
+  // CORS proxy cascade — tried in order until one works
+  const PROXIES = [
+    u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://cors.eu.org/${u}`,
+  ];
 
   /* ────────────────────────────────────────────────────
      Geometry helpers
@@ -517,31 +524,71 @@
   }
 
   /* ────────────────────────────────────────────────────
-     Network helpers — direct then CORS proxy
+     Network helpers — multi-proxy waterfall
+     Tries: direct → proxy[0] POST → proxy[1] GET → proxy[2] GET
   ──────────────────────────────────────────────────── */
-  async function getJson(url) {
-    try {
-      const r = await fetch(url);
-      if (r.ok) return r.json();
-    } catch {}
-    const r = await fetch(CORS_PROXY + encodeURIComponent(url));
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
+  function isValidData(data) {
+    return data && typeof data === 'object' && Array.isArray(data.Results);
   }
 
-  async function postJson(url, body) {
-    const opts = {
+  async function tryFetch(fetchFn) {
+    try {
+      const r = await fetchFn();
+      if (!r.ok) return null;
+      const data = await r.json();
+      return isValidData(data) ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function fetchWithProxies(targetUrl, params) {
+    const postOpts = {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
+      body:    params.toString(),
     };
-    try {
-      const r = await fetch(url, opts);
-      if (r.ok) return r.json();
-    } catch {}
-    const r = await fetch(CORS_PROXY + encodeURIComponent(url), opts);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
+
+    // Build a GET URL (same endpoint accepts GET with query params)
+    const getUrl = targetUrl + '?' + params.toString();
+
+    const attempts = [
+      // 1. Direct POST (works if same-origin or API allows CORS)
+      () => fetch(targetUrl, postOpts),
+      // 2. corsproxy.io — POST
+      () => fetch(PROXIES[0](targetUrl), postOpts),
+      // 3. allorigins — GET
+      () => fetch(PROXIES[1](getUrl)),
+      // 4. cors.eu.org — GET
+      () => fetch(PROXIES[2](getUrl)),
+    ];
+
+    for (const attempt of attempts) {
+      const data = await tryFetch(attempt);
+      if (data) return data;
+    }
+
+    throw new Error('All connection methods failed. The API may be temporarily down or blocking automated access.');
+  }
+
+  async function fetchGetWithProxies(url) {
+    const attempts = [
+      () => fetch(url),
+      () => fetch(PROXIES[0](url)),
+      () => fetch(PROXIES[1](url)),
+      () => fetch(PROXIES[2](url)),
+    ];
+
+    for (const attempt of attempts) {
+      try {
+        const r = await attempt();
+        if (r.ok) {
+          const data = await r.json();
+          if (data) return data;
+        }
+      } catch {}
+    }
+    return null;
   }
 
   /* ────────────────────────────────────────────────────
@@ -555,12 +602,14 @@
       CultureId:     '1',
     });
     try {
-      const data = await getJson(`${GEOCODE_URL}?${qs}`);
+      const data = await fetchGetWithProxies(`${GEOCODE_URL}?${qs}`);
       const r = data?.Results?.[0];
       if (r) {
-        const lat = parseFloat(r.Latitude  ?? r.latitude);
-        const lon = parseFloat(r.Longitude ?? r.longitude);
-        if (!isNaN(lat) && !isNaN(lon)) return { lat, lon, geocoded: true };
+        const lat = parseFloat(r.Latitude  ?? r.latitude  ?? 0);
+        const lon = parseFloat(r.Longitude ?? r.longitude ?? 0);
+        if (!isNaN(lat) && !isNaN(lon) && lat !== 0) {
+          return { lat, lon, geocoded: true };
+        }
       }
     } catch {}
     return { ...SINGER_FALLBACK, geocoded: false };
@@ -584,7 +633,7 @@
 
     setLoading(true, 'Searching MLS listings within 5 km…');
 
-    // Step 3 — query MLS
+    // Step 3 — query MLS via multi-proxy waterfall
     const params = new URLSearchParams({
       CultureId:            '1',
       ApplicationId:        '1',
@@ -607,8 +656,8 @@
     let fetchErr   = '';
 
     try {
-      const data = await postJson(SEARCH_URL, params.toString());
-      allResults = data?.Results ?? [];
+      const data = await fetchWithProxies(SEARCH_POST_URL, params);
+      allResults = data.Results ?? [];
     } catch (e) {
       fetchErr = e.message;
     }
@@ -617,7 +666,7 @@
     stampTime();
 
     if (allResults === null) {
-      showError('Connection failed (' + fetchErr + '). The Realtor.ca API may be temporarily unavailable.');
+      showError(fetchErr);
       return;
     }
 
